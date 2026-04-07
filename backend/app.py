@@ -128,6 +128,11 @@ def get_extraction(meeting_id):
         
     result = run_extraction(meeting["raw_text"])
 
+    if "api_error" in result:
+        if "429" in result["api_error"]:
+            return jsonify({"error": "Google Gemini API rate limit reached. Please wait 60 seconds."}), 429
+        return jsonify({"error": result["api_error"]}), 500
+
     decisions = result.get("decisions") or []
     actions = result.get("action_items") or []
 
@@ -224,6 +229,11 @@ def get_sentiment(meeting_id):
         return jsonify({"error": "Meeting not found"}), 404
 
     result = run_sentiment(meeting["raw_text"])
+
+    if "api_error" in result:
+        if "429" in result["api_error"]:
+            return jsonify({"error": "Google Gemini API rate limit reached. Please wait 60 seconds."}), 429
+        return jsonify({"error": result["api_error"]}), 500
 
     segments = result.get("segments") or []
     speakers = result.get("speakers") or []

@@ -6,17 +6,25 @@ import { Loader2 } from 'lucide-react';
 export default function SentimentCharts({ meetingId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (meetingId) fetchSentiment();
   }, [meetingId]);
 
   const fetchSentiment = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await client.get(`/meetings/${meetingId}/sentiment`);
       setData(res.data);
     } catch (err) {
       console.error(err);
+      if (err.response && err.response.status === 429) {
+        setError("Google Gemini API Rate Limit Exceeded. Please wait 60 seconds and try again.");
+      } else {
+        setError("An error occurred while analyzing sentiment. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -28,6 +36,21 @@ export default function SentimentCharts({ meetingId }) {
         <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
         <span className="text-slate-500 font-medium">Analyzing sentiment & tone...</span>
         <span className="text-sm text-slate-400 mt-1">This takes ~10 seconds.</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-xl flex flex-col items-center justify-center text-center py-12 mx-auto max-w-2xl">
+        <h3 className="font-bold text-lg mb-2">Sentiment Analysis Failed</h3>
+        <p className="mb-6">{error}</p>
+        <button 
+          onClick={fetchSentiment}
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+        >
+          Retry Analysis
+        </button>
       </div>
     );
   }

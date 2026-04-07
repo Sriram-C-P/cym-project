@@ -57,7 +57,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Projects</h1>
-        <p className="mt-2 text-slate-500">Manage your meeting intelligence workspaces.</p>
+        <p className="mt-2 text-slate-500">Manage your TLDR workspaces.</p>
       </div>
 
       <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">

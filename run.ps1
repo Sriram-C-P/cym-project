@@ -1,5 +1,5 @@
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "Starting Meeting Intelligence Hub..." -ForegroundColor Cyan
+Write-Host "Starting TLDR..." -ForegroundColor Cyan
 Write-Host "Press Ctrl+C to stop both servers." -ForegroundColor Yellow
 Write-Host "=========================================" -ForegroundColor Cyan
 

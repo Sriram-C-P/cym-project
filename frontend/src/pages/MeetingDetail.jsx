@@ -82,18 +82,27 @@ export default function MeetingDetail() {
   const [tab, setTab] = useState("decisions");
   const [extraction, setExtraction] = useState({ decisions: [], actions: [] });
   const [extLoading, setExtLoading] = useState(true);
+  const [extError, setExtError] = useState(null);
+
+  const fetchExtraction = async () => {
+    setExtLoading(true);
+    setExtError(null);
+    try {
+      const res = await client.get(`/meetings/${meetingId}/extraction`);
+      setExtraction({ decisions: res.data.decisions, actions: res.data.actions });
+    } catch (err) {
+      console.error("Failed to extract:", err);
+      if (err.response && err.response.status === 429) {
+        setExtError("Google Gemini API Rate Limit Exceeded. You are making too many requests in a short time. Please wait 60 seconds and try again.");
+      } else {
+        setExtError("An error occurred while communicating with the AI. Please try again.");
+      }
+    } finally {
+      setExtLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchExtraction = async () => {
-      try {
-        const res = await client.get(`/meetings/${meetingId}/extraction`);
-        setExtraction({ decisions: res.data.decisions, actions: res.data.actions });
-      } catch (err) {
-        console.error("Failed to extract:", err);
-      } finally {
-        setExtLoading(false);
-      }
-    };
     fetchExtraction();
   }, [meetingId]);
 
@@ -132,6 +141,20 @@ export default function MeetingDetail() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         {tab === "decisions" && (
           <div className="space-y-12">
+            {extError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-start justify-between">
+                <div>
+                  <h3 className="font-bold">Extraction Failed</h3>
+                  <p className="text-sm mt-1">{extError}</p>
+                </div>
+                <button 
+                  onClick={fetchExtraction}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Retry Analysis
+                </button>
+              </div>
+            )}
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-slate-900">Key Decisions</h2>

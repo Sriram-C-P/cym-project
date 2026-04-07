@@ -14,9 +14,9 @@ function App() {
               <div className="flex">
                 <Link to="/" className="flex-shrink-0 flex items-center gap-2">
                   <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-xl">M</span>
+                    <span className="text-white font-bold text-xl">T</span>
                   </div>
-                  <span className="font-bold text-xl tracking-tight text-slate-900">MeetingHub</span>
+                  <span className="font-bold text-xl tracking-tight text-slate-900">TLDR</span>
                 </Link>
                 <nav className="ml-8 flex space-x-8">
                   <Link to="/" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
