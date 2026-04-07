@@ -37,6 +37,24 @@ def create_project():
     db.commit()
     return jsonify({"id": c.lastrowid, "name": name}), 201
 
+@app.route("/api/projects/<int:project_id>", methods=["DELETE"])
+def delete_project(project_id):
+    db = get_db()
+    # Get all meeting IDs for this project
+    meetings = db.execute("SELECT id FROM meetings WHERE project_id = ?", [project_id]).fetchall()
+    meeting_ids = [m["id"] for m in meetings]
+
+    # Cascade delete all related data
+    for mid in meeting_ids:
+        db.execute("DELETE FROM extractions WHERE meeting_id = ?", [mid])
+        db.execute("DELETE FROM sentiments WHERE meeting_id = ?", [mid])
+    db.execute("DELETE FROM meetings WHERE project_id = ?", [project_id])
+    db.execute("DELETE FROM chat_messages WHERE project_id = ?", [project_id])
+    db.execute("DELETE FROM projects WHERE id = ?", [project_id])
+    db.commit()
+    return jsonify({"message": "Project deleted"}), 200
+
+
 def parse_transcript(filepath):
     if filepath.endswith('.vtt'):
         vtt = webvtt.read(filepath)
@@ -90,11 +108,19 @@ def get_extraction(meeting_id):
     ).fetchone()
 
     if cached:
-        return jsonify({
-            "decisions": json.loads(cached["decisions_json"]),
-            "actions": json.loads(cached["actions_json"]),
-            "cached": True
-        })
+        decisions = json.loads(cached["decisions_json"])
+        actions = json.loads(cached["actions_json"])
+        # Only use the cache if it actually has data — don't serve stale empty results from previous failures
+        if decisions or actions:
+            return jsonify({
+                "decisions": decisions,
+                "actions": actions,
+                "cached": True
+            })
+        else:
+            # Delete the bad cache entry so we can retry
+            db.execute("DELETE FROM extractions WHERE meeting_id = ?", [meeting_id])
+            db.commit()
 
     meeting = db.execute("SELECT * FROM meetings WHERE id = ?", [meeting_id]).fetchone()
     if not meeting:
@@ -102,13 +128,18 @@ def get_extraction(meeting_id):
         
     result = run_extraction(meeting["raw_text"])
 
-    db.execute(
-        "INSERT INTO extractions (meeting_id, decisions_json, actions_json) VALUES (?, ?, ?)",
-        [meeting_id, json.dumps(result.get("decisions", [])), json.dumps(result.get("action_items", []))]
-    )
-    db.commit()
+    decisions = result.get("decisions") or []
+    actions = result.get("action_items") or []
 
-    return jsonify({"decisions": result.get("decisions", []), "actions": result.get("action_items", []), "cached": False})
+    # Only cache if the extraction actually returned data (don't persist API failures)
+    if decisions or actions:
+        db.execute(
+            "INSERT OR REPLACE INTO extractions (meeting_id, decisions_json, actions_json) VALUES (?, ?, ?)",
+            [meeting_id, json.dumps(decisions), json.dumps(actions)]
+        )
+        db.commit()
+
+    return jsonify({"decisions": decisions, "actions": actions, "cached": False})
 
 @app.route("/api/meetings/<int:meeting_id>/extraction/export", methods=["GET"])
 def export_extraction(meeting_id):
@@ -117,15 +148,15 @@ def export_extraction(meeting_id):
     if not cached:
         return jsonify({"error": "No extraction found for this meeting. Please extract it first."}), 404
 
-    decisions = json.loads(cached["decisions_json"])
-    actions = json.loads(cached["actions_json"])
+    decisions = json.loads(cached["decisions_json"]) or []
+    actions = json.loads(cached["actions_json"]) or []
 
     si = StringIO()
     cw = csv.writer(si)
     cw.writerow(["Type", "Summary/Task", "Context/Owner", "Speakers Selected/Priority", "Due Date"])
     
     for d in decisions:
-        cw.writerow(["Decision", d.get("summary", ""), d.get("context", ""), ", ".join(d.get("speakers_involved", [])), ""])
+        cw.writerow(["Decision", d.get("summary", ""), d.get("context", ""), ", ".join(d.get("speakers_involved") or []), ""])
         
     for a in actions:
         cw.writerow(["Action Item", a.get("task", ""), a.get("owner", ""), a.get("priority", ""), a.get("due_date", "")])
@@ -159,7 +190,7 @@ def send_chat_message(project_id):
     meetings = db.execute("SELECT filename, raw_text, upload_date FROM meetings WHERE project_id = ?", [project_id]).fetchall()
     history = db.execute("SELECT role, content FROM (SELECT role, content, created_at FROM chat_messages WHERE project_id = ? ORDER BY created_at DESC LIMIT 10) ORDER BY created_at ASC", [project_id]).fetchall()
 
-    reply = run_chat(user_message, [dict(m) for m in meetings], [dict(h) for h in history])
+    reply = run_chat([dict(m) for m in meetings], [dict(h) for h in history])
 
     c.execute("INSERT INTO chat_messages (project_id, role, content) VALUES (?, 'assistant', ?)", [project_id, reply])
     db.commit()
@@ -172,13 +203,21 @@ def get_sentiment(meeting_id):
     cached = db.execute("SELECT * FROM sentiments WHERE meeting_id = ?", [meeting_id]).fetchone()
 
     if cached:
-        return jsonify({
-            "overall_score": cached["overall_score"],
-            "overall_label": cached["overall_label"],
-            "segments": json.loads(cached["segments_json"]),
-            "speakers": json.loads(cached["speakers_json"]),
-            "cached": True
-        })
+        segments = json.loads(cached["segments_json"])
+        speakers = json.loads(cached["speakers_json"])
+        # Only use cache if it actually has data
+        if segments or speakers:
+            return jsonify({
+                "overall_score": cached["overall_score"],
+                "overall_label": cached["overall_label"],
+                "segments": segments,
+                "speakers": speakers,
+                "cached": True
+            })
+        else:
+            # Delete stale empty cache
+            db.execute("DELETE FROM sentiments WHERE meeting_id = ?", [meeting_id])
+            db.commit()
 
     meeting = db.execute("SELECT * FROM meetings WHERE id = ?", [meeting_id]).fetchone()
     if not meeting:
@@ -186,17 +225,22 @@ def get_sentiment(meeting_id):
 
     result = run_sentiment(meeting["raw_text"])
 
-    db.execute(
-        "INSERT INTO sentiments (meeting_id, overall_score, overall_label, segments_json, speakers_json) VALUES (?, ?, ?, ?, ?)",
-        [meeting_id, result.get("overall_score", 0.0), result.get("overall_label", "neutral"), json.dumps(result.get("segments", [])), json.dumps(result.get("speakers", []))]
-    )
-    db.commit()
+    segments = result.get("segments") or []
+    speakers = result.get("speakers") or []
+
+    # Only cache if we got real data
+    if segments or speakers:
+        db.execute(
+            "INSERT OR REPLACE INTO sentiments (meeting_id, overall_score, overall_label, segments_json, speakers_json) VALUES (?, ?, ?, ?, ?)",
+            [meeting_id, result.get("overall_score", 0.0), result.get("overall_label", "neutral"), json.dumps(segments), json.dumps(speakers)]
+        )
+        db.commit()
 
     return jsonify({
         "overall_score": result.get("overall_score", 0.0),
         "overall_label": result.get("overall_label", "neutral"),
-        "segments": result.get("segments", []),
-        "speakers": result.get("speakers", []),
+        "segments": segments,
+        "speakers": speakers,
         "cached": False
     })
 

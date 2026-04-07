@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
-import { FolderPlus, Folder, ArrowRight } from 'lucide-react';
+import { FolderPlus, Folder, ArrowRight, Trash2 } from 'lucide-react';
 
 export default function Dashboard() {
   const [projects, setProjects] = useState([]);
@@ -38,6 +38,18 @@ export default function Dashboard() {
       console.error(err);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteProject = async (e, projectId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this project? All meetings, analyses, and chat history will be permanently removed.')) return;
+    try {
+      await client.delete(`/projects/${projectId}`);
+      setProjects(projects.filter(p => p.id !== projectId));
+    } catch (err) {
+      console.error('Delete failed:', err);
     }
   };
 
@@ -88,11 +100,18 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <Link
+              <div
                 key={project.id}
-                to={`/project/${project.id}/upload`}
                 className="group relative bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex flex-col justify-between h-40"
+                onClick={() => navigate(`/project/${project.id}/upload`)}
               >
+                <button
+                  onClick={(e) => handleDeleteProject(e, project.id)}
+                  className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10"
+                  title="Delete project"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2">
                     {project.name}
@@ -105,7 +124,7 @@ export default function Dashboard() {
                   Open Project
                   <ArrowRight className="w-4 h-4 ml-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

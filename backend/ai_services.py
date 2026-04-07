@@ -47,7 +47,7 @@ TRANSCRIPT:
 
     try:
         response = client.models.generate_content(
-            model='gemini-3.1-pro',
+            model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.2,
@@ -75,18 +75,18 @@ Rules:
 TRANSCRIPTS:
 {transcript_block}"""
 
-def run_chat(user_message: str, transcripts: list[dict], history: list[dict]) -> str:
+def run_chat(transcripts: list[dict], history: list[dict]) -> str:
     client = get_client()
     system_instruction = build_chat_system_prompt(transcripts)
     
     contents = []
     for h in history:
         role = "user" if h["role"] == "user" else "model"
-        contents.append(types.Content(role=role, parts=[types.Part.from_text(h["content"])]))
+        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=h["content"])]))
         
     try:
         response = client.models.generate_content(
-            model='gemini-3.1-pro',
+            model='gemini-2.5-flash',
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -141,7 +141,7 @@ def run_sentiment(transcript_text: str) -> dict:
     
     try:
         response = client.models.generate_content(
-            model='gemini-3.1-pro',
+            model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.2,

@@ -1,0 +1,25 @@
+John: Good morning everyone, let's get started with our Q3 architecture sync. We have a lot of items on the agenda today, primarily around the cloud migration and the UI redesign. Sarah, can you give us an update on the cloud migration timeline?
+
+Sarah: Sure. We've assessed the current monolithic databases and identified the major bottlenecks. I think we should decide to move the user authentication database to AWS Cognito by the end of August. It's the most secure approach right now.
+
+John: I agree. Let's lock that in as a firm decision. Alex, what about the UI redesign? Are the Figma mockups ready for review?
+
+Alex: They are mostly ready, but I'm still waiting on the brand guide from Marketing. The primary color palette is still up in the air. 
+
+Sarah: That sounds risky since frontend development is supposed to start next week. 
+
+Alex: I know. I strongly suggest we assign an action item for someone to follow up with Marketing today. 
+
+John: I'll take that. I've got a meeting with them at 2 PM. I'll make sure we get the final palette. Alex, you'll need to update the Figma files within 48 hours after I send it to you. 
+
+Alex: Understood. That shouldn't be an issue.
+
+John: Perfect. Are there any concerns regarding the budget allocation for the new AWS environments?
+
+Sarah: Yes, actually. The current cost estimations for the RDS databases look about 20% higher than we forecasted. We need to be careful not to overshoot the Q3 budget. 
+
+John: Let's hold off on provisioning the production environments until we can review the pricing models again. Sarah, please review the AWS pricing calculator this week and come up with a more optimized instance plan.
+
+Sarah: Will do. I'll have the revised budget proposal ready by Friday.
+
+John: Thanks Sarah. Let's wrap up. I'll talk to Marketing, Sarah has the AWS budget, and Alex is waiting to finalize Figma. Great meeting everyone.
