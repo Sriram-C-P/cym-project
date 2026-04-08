@@ -1,14 +1,11 @@
-# Backend
 backend/venv/
 backend/.env
 backend/meetings.db
 backend/__pycache__/
 backend/uploads/
 
-# Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/.env*
 
-# General
 .DS_Store

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import client from '../api/client';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import { Loader2 } from 'lucide-react';
 
 export default function SentimentCharts({ meetingId }) {
@@ -115,40 +115,82 @@ export default function SentimentCharts({ meetingId }) {
       </div>
 
       {data.speakers && data.speakers.length > 0 && (
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 mb-6">Speaker Breakdown</h3>
-          <div className="h-64">
-             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.speakers} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                <XAxis type="number" domain={[-1, 1]} hide />
-                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 13, fill: '#475569' }} axisLine={false} tickLine={false} />
-                <ReferenceLine x={0} stroke="#e2e8f0" />
-                <Tooltip 
-                  cursor={{fill: '#f1f5f9'}}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const spk = payload[0].payload;
-                      return (
-                         <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200 text-sm max-w-xs z-50 relative">
-                           <div className="flex items-center justify-between mb-1">
-                             <p className="font-bold text-slate-900">{spk.name}</p>
-                             <span className="font-bold" style={{color: getScoreColor(spk.score)}}>{spk.score > 0 ? '+' : ''}{spk.score}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Speaker Breakdown</h3>
+            <div className="h-64">
+               <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.speakers} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                  <XAxis type="number" domain={[-1, 1]} hide />
+                  <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 13, fill: '#475569' }} axisLine={false} tickLine={false} />
+                  <ReferenceLine x={0} stroke="#e2e8f0" />
+                  <Tooltip 
+                    cursor={{fill: '#f1f5f9'}}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const spk = payload[0].payload;
+                        return (
+                           <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200 text-sm max-w-xs z-50 relative">
+                             <div className="flex items-center justify-between mb-1">
+                               <p className="font-bold text-slate-900">{spk.name}</p>
+                               <span className="font-bold" style={{color: getScoreColor(spk.score)}}>{spk.score > 0 ? '+' : ''}{spk.score}</span>
+                             </div>
+                             <p className="text-slate-600 capitalize text-xs mb-2">{spk.overall_sentiment}</p>
+                             <p className="text-slate-500 italic">"{spk.notes}"</p>
                            </div>
-                           <p className="text-slate-600 capitalize text-xs mb-2">{spk.overall_sentiment}</p>
-                           <p className="text-slate-500 italic">"{spk.notes}"</p>
-                         </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={20}>
-                  {data.speakers.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getScoreColor(entry.score)} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={24}>
+                    {data.speakers.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={getScoreColor(entry.score)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Share of Voice</h3>
+            <div className="h-64 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center">
+               <ResponsiveContainer width="100%" height="100%">
+                 <PieChart>
+                   <Pie
+                     data={data.speakers.filter(s => s.share_of_voice_percentage > 0 || !s.share_of_voice_percentage)} // fallback for old data without percentage
+                     dataKey={s => s.share_of_voice_percentage || 1} 
+                     nameKey="name"
+                     cx="50%"
+                     cy="50%"
+                     innerRadius={60}
+                     outerRadius={90}
+                     paddingAngle={2}
+                     label={({name, value}) => `${name} (${value}%)`}
+                     labelLine={false}
+                   >
+                     {data.speakers.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#64748b'][index % 6]} />
+                     ))}
+                   </Pie>
+                   <Tooltip 
+                     content={({ active, payload }) => {
+                       if (active && payload && payload.length) {
+                         const spk = payload[0].payload;
+                         return (
+                           <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200 text-sm">
+                             <p className="font-bold text-slate-900">{spk.name}</p>
+                             <p className="text-slate-600">{spk.share_of_voice_percentage}% Participation</p>
+                           </div>
+                         );
+                       }
+                       return null;
+                     }}
+                   />
+                 </PieChart>
+               </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}

@@ -32,6 +32,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS extractions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         meeting_id INTEGER UNIQUE REFERENCES meetings(id),
+        summary_json TEXT,
+        tags_json TEXT,
         decisions_json TEXT,
         actions_json TEXT,
         extracted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

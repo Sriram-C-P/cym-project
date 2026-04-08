@@ -80,7 +80,7 @@ function ActionItemsTable({ actions, loading }) {
 export default function MeetingDetail() {
   const { projectId, meetingId } = useParams();
   const [tab, setTab] = useState("decisions");
-  const [extraction, setExtraction] = useState({ decisions: [], actions: [] });
+  const [extraction, setExtraction] = useState({ decisions: [], actions: [], summary: "", tags: [] });
   const [extLoading, setExtLoading] = useState(true);
   const [extError, setExtError] = useState(null);
 
@@ -89,7 +89,12 @@ export default function MeetingDetail() {
     setExtError(null);
     try {
       const res = await client.get(`/meetings/${meetingId}/extraction`);
-      setExtraction({ decisions: res.data.decisions, actions: res.data.actions });
+      setExtraction({ 
+        decisions: res.data.decisions, 
+        actions: res.data.actions,
+        summary: res.data.summary,
+        tags: res.data.tags || []
+      });
     } catch (err) {
       console.error("Failed to extract:", err);
       if (err.response && err.response.status === 429) {
@@ -155,6 +160,23 @@ export default function MeetingDetail() {
                 </button>
               </div>
             )}
+            
+            {extraction.summary && (
+              <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl">
+                <h2 className="text-xl font-bold text-slate-900 mb-2">TL;DR Executive Summary</h2>
+                <p className="text-slate-700 leading-relaxed mb-4">{extraction.summary}</p>
+                {extraction.tags && extraction.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {extraction.tags.map((tag, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider rounded-full">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-slate-900">Key Decisions</h2>

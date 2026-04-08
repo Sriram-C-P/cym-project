@@ -26,6 +26,8 @@ def run_extraction(transcript_text: str) -> dict:
 
 Return exactly this JSON shape:
 {{
+  "summary": "string",
+  "tags": ["string", "string", "string"],
   "decisions": [
     {{"summary": "string", "context": "string", "speakers_involved": ["string"]}}
   ],
@@ -57,7 +59,22 @@ TRANSCRIPT:
         return safe_parse(response.text)
     except Exception as e:
         print("Gemini API Error:", e)
-        return {"decisions": [], "action_items": [], "api_error": str(e)}
+        return {"decisions": [], "action_items": [], "summary": "", "tags": [], "api_error": str(e)}
+
+def generate_meeting_title(transcript_text: str) -> str:
+    client = get_client()
+    prompt = f"Read the following meeting transcript snippet and generate a highly concise, human-readable title for it. Maximum 5 words. No quotes. No extra text.\n\nTRANSCRIPT:\n{transcript_text[:1000]}"
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.3)
+        )
+        title = response.text.strip().replace('"', '')
+        return title if title else "Untitled Meeting"
+    except Exception as e:
+        print("Gemini API Error (Title):", e)
+        return "Untitled Meeting"
 
 def build_chat_system_prompt(transcripts: list[dict]) -> str:
     transcript_block = "\n\n".join(
@@ -120,6 +137,7 @@ Return exactly this JSON shape:
       "name": "string",
       "overall_sentiment": "positive|neutral|negative",
       "score": 0.0,
+      "share_of_voice_percentage": 0,
       "notes": "string"
     }}
   ]
